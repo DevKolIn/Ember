@@ -1,0 +1,11 @@
+RowName,StateTag,Montage,PlayRate
+Hit,Character.State.IsHit,/Script/Engine.AnimMontage'/Game/Character/Animation/Montage/HitImpact_Montage.HitImpact_Montage',1
+Dead,Character.State.IsDead,,1
+Froll,Character.State.IsAvoid,/Script/Engine.AnimMontage'/Game/Character/Animation/Montage/Roll_Montage.Roll_Montage',1
+Broll,,,1
+Lroll,,,1
+Rroll,,,1
+FLRoll,,,1
+FRRoll,,,1
+BLRoll,,,1
+BRRoll,,,1
