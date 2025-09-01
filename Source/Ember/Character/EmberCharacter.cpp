@@ -20,7 +20,6 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Component/WeaponComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GAS/EmberAbilitySystemComponent.h"
 #include "GAS/Attribute/EmberAS_Player.h"
 #include "Item/Drop/PickupItemActor.h"
 #include "Utility/EmberGameplayTags.h"
@@ -30,17 +29,14 @@ AEmberCharacter::AEmberCharacter()
 {
 
 	ASC == nullptr;
-
-
-
 	PrimaryActorTick.bCanEverTick = true;
 
 	CHelpers::CreateComponent(this, &SpringArm, "SpringArm", RootComponent);
 	SpringArm->TargetArmLength = 300.f; // ī�޶� �Ÿ�
 	SpringArm->bUsePawnControlRotation = true; // ���콺�� ȸ��
 	SpringArm->bDoCollisionTest = false;
-	
-	CHelpers::CreateComponent(this, &Camera,"Camera", SpringArm);
+
+	CHelpers::CreateComponent(this, &Camera, "Camera", SpringArm);
 	Camera->bUsePawnControlRotation = false; // ī�޶�� �������Ͽ� ���� (���� ȸ�� X)
 
 	CHelpers::CreateActorComponent(this, &MoveComponent, "Movement Component");
@@ -49,7 +45,7 @@ AEmberCharacter::AEmberCharacter()
 	CHelpers::CreateActorComponent<UMontageComponent>(this, &MontageComponent, "Montage Component");
 
 	bUseControllerRotationYaw = false;
-	
+
 	GetCharacterMovement()->bOrientRotationToMovement = true;// �̵� �������� ĳ���� ȸ��
 
 	PickupSphere = CreateDefaultSubobject<USphereComponent>(TEXT("PickupSphere"));
@@ -78,11 +74,8 @@ void AEmberCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-
 	// (디버그 콘솔/로그 등)
 	if (AEmberPlayerState* PS = GetPlayerState<AEmberPlayerState>())
-	ASC = Cast< UEmberAbilitySystemComponent>(state->GetAbilitySystemComponent());
-	if (ASC == nullptr)
 	{
 		ASC = PS->GetAbilitySystemComponent();
 		if (!ASC)
@@ -144,7 +137,7 @@ FGenericTeamId AEmberCharacter::GetGenericTeamId() const
 	return FGenericTeamId((uint8)EGameTeamID::Team1);
 }
 
-void AEmberCharacter::Dead(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec, 
+void AEmberCharacter::Dead(AActor* DamageInstigator, AActor* DamageCauser, const FGameplayEffectSpec* DamageEffectSpec,
 	float DamageMagnitude, float OldValue, float NewValue)
 {
 	FGameplayEventData Payload;
@@ -158,7 +151,7 @@ void AEmberCharacter::Dead(AActor* DamageInstigator, AActor* DamageCauser, const
 
 void AEmberCharacter::SetIgnoreCollision(bool bIgnore)
 {
-	
+
 }
 
 void AEmberCharacter::Tick(float DeltaTime)
@@ -233,13 +226,13 @@ void AEmberCharacter::SetupGASInputComponent()
 			DebugLogE("input is null");
 			return;
 		}
-		input->BindAction(PlayerController.Get()->JumpAction, ETriggerEvent::Triggered,this,&AEmberCharacter::GASInputPressed,0);
-		input->BindAction(PlayerController.Get()->JumpAction, ETriggerEvent::Completed,this,&AEmberCharacter::GASInputReleased, 0);
-		input->BindAction(PlayerController.Get()->SprintAction,ETriggerEvent::Triggered,this, &AEmberCharacter::GASInputPressed,1);
-		input->BindAction(PlayerController.Get()->SprintAction,ETriggerEvent::Completed,this, &AEmberCharacter::GASInputReleased,1);
+		input->BindAction(PlayerController.Get()->JumpAction, ETriggerEvent::Triggered, this, &AEmberCharacter::GASInputPressed, 0);
+		input->BindAction(PlayerController.Get()->JumpAction, ETriggerEvent::Completed, this, &AEmberCharacter::GASInputReleased, 0);
+		input->BindAction(PlayerController.Get()->SprintAction, ETriggerEvent::Triggered, this, &AEmberCharacter::GASInputPressed, 1);
+		input->BindAction(PlayerController.Get()->SprintAction, ETriggerEvent::Completed, this, &AEmberCharacter::GASInputReleased, 1);
 		input->BindAction(PlayerController.Get()->AttackAction, ETriggerEvent::Triggered, this, &AEmberCharacter::GASInputPressed, 2);
 		input->BindAction(PlayerController.Get()->Avoid, ETriggerEvent::Triggered, this, &AEmberCharacter::GASInputPressed, 3);
-		input->BindAction(PlayerController.Get()->JumpAction, ETriggerEvent::Completed,this,&AEmberCharacter::GASInputReleased, 3);
+		input->BindAction(PlayerController.Get()->JumpAction, ETriggerEvent::Completed, this, &AEmberCharacter::GASInputReleased, 3);
 	}
 }
 
@@ -253,7 +246,7 @@ void AEmberCharacter::GASInputPressed(int32 Input)
 		UE_LOG(LogTemp, Warning, TEXT("Spec Found, IsActive: %s"), spec->IsActive() ? TEXT("True") : TEXT("False"));
 		UE_LOG(LogTemp, Warning, TEXT("InputPressed was: %s"), spec->InputPressed ? TEXT("True") : TEXT("False"));
 
-		spec->InputPressed = true; 
+		spec->InputPressed = true;
 		if (spec->IsActive() == true)
 		{
 			UE_LOG(LogTemp, Warning, TEXT("Calling AbilitySpecInputPressed"));
@@ -275,7 +268,7 @@ void AEmberCharacter::GASInputReleased(int32 Input)
 		DebugLogE("spec is null");
 		return;
 	}
-	
+
 	spec->InputPressed = false;
 	if (spec->IsActive() == true)
 		ASC->AbilityLocalInputReleased(Input);
@@ -305,10 +298,15 @@ void AEmberCharacter::DamageTemperature()
 	}
 }
 
-//UAbilitySystemComponent* AEmberCharacter::GetAbilitySystemComponent() const
-//{
-//	return ASC;
-//}
+UAbilitySystemComponent* AEmberCharacter::GetAbilitySystemComponent() const
+{
+	return ASC;
+}
+
+void AEmberCharacter::Attack()
+{
+	UE_LOG(LogTemp, Warning, TEXT("Attack triggered!"));
+}
 
 //void AEmberCharacter::PickupItem()
 //{
@@ -535,19 +533,19 @@ void AEmberCharacter::Server_TryEquipRune_Implementation(const URuneItemTemplate
 	);
 }
 void AEmberCharacter::Multicast_OnRuneEquippedDetailed_Implementation(
-    const FText& RuneName, int32 SlotIndex,
-    float New_AD,    float dAD,
-    float New_MaxAD, float dMaxAD,
-    float New_Range, float dRange,
-    float New_Radius,float dRadius,
-    float New_Meta,  float dMeta)
+	const FText& RuneName, int32 SlotIndex,
+	float New_AD, float dAD,
+	float New_MaxAD, float dMaxAD,
+	float New_Range, float dRange,
+	float New_Radius, float dRadius,
+	float New_Meta, float dMeta)
 {
-    UE_LOG(LogTemp, Warning, TEXT("[Rune Equipped] %s | Slot=%d"), *RuneName.ToString(), SlotIndex);
-    UE_LOG(LogTemp, Warning, TEXT("  - AttackDamage     : %+0.1f (Now: %.1f)"), dAD,     New_AD);
-    UE_LOG(LogTemp, Warning, TEXT("  - MaxAttackDamage  : %+0.1f (Now: %.1f)"), dMaxAD,  New_MaxAD);
-    UE_LOG(LogTemp, Warning, TEXT("  - AttackRange      : %+0.1f (Now: %.1f)"), dRange,  New_Range);
-    UE_LOG(LogTemp, Warning, TEXT("  - AttackRadius     : %+0.1f (Now: %.1f)"), dRadius, New_Radius);
-    UE_LOG(LogTemp, Warning, TEXT("  - MetaDamage       : %+0.1f (Now: %.1f)"), dMeta,   New_Meta);
+	UE_LOG(LogTemp, Warning, TEXT("[Rune Equipped] %s | Slot=%d"), *RuneName.ToString(), SlotIndex);
+	UE_LOG(LogTemp, Warning, TEXT("  - AttackDamage     : %+0.1f (Now: %.1f)"), dAD, New_AD);
+	UE_LOG(LogTemp, Warning, TEXT("  - MaxAttackDamage  : %+0.1f (Now: %.1f)"), dMaxAD, New_MaxAD);
+	UE_LOG(LogTemp, Warning, TEXT("  - AttackRange      : %+0.1f (Now: %.1f)"), dRange, New_Range);
+	UE_LOG(LogTemp, Warning, TEXT("  - AttackRadius     : %+0.1f (Now: %.1f)"), dRadius, New_Radius);
+	UE_LOG(LogTemp, Warning, TEXT("  - MetaDamage       : %+0.1f (Now: %.1f)"), dMeta, New_Meta);
 }
 void AEmberCharacter::Multicast_OnRuneEquipped_Implementation(const URuneItemTemplate* Template, int32 SlotIndex)
 {

@@ -20,7 +20,7 @@ URuneSystemComponent::URuneSystemComponent()
 }
 
 void URuneSystemComponent::GetLifetimeReplicatedProps(TArray<FLifetimeProperty>& OutLifetimeProps) const
-{   
+{
     Super::GetLifetimeReplicatedProps(OutLifetimeProps);
     DOREPLIFETIME(URuneSystemComponent, RuneSlots);
 }
@@ -100,13 +100,11 @@ bool URuneSystemComponent::RemoveRune(int32 SlotIndex)
         FRuneSlot& Slot = RuneSlots[SlotIndex];
 
         if (Slot.AbilityHandle.IsValid())
-
-        UAbilitySystemComponent* ASC = OwnerChar->GetAbilitySystemComponent();
-        if (ASC)
         {
             ASC->ClearAbility(Slot.AbilityHandle);
             Slot.AbilityHandle = FGameplayAbilitySpecHandle();
         }
+
         if (Slot.EffectHandle.IsValid())
         {
             ASC->RemoveActiveGameplayEffect(Slot.EffectHandle);
@@ -117,6 +115,7 @@ bool URuneSystemComponent::RemoveRune(int32 SlotIndex)
     RuneSlots[SlotIndex] = FRuneSlot(); // 초기화
     return true;
 }
+
 
 bool URuneSystemComponent::EquipRuneFromTemplate(const URuneItemTemplate* Template,
     int32 PreferredSlotIndex,
