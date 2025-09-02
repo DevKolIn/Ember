@@ -122,6 +122,7 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Pickup")
 	USphereComponent* PickupSphere;
 	UPROPERTY(EditAnywhere, Category = "Interaction")
+	
 	float InteractDistance = 500.0f;
 	UPROPERTY(EditAnywhere, Category = "Interaction")
 	bool bDrawInteractionDebug = true;

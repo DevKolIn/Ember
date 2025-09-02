@@ -623,6 +623,7 @@ APickupItemActor* AEmberCharacter::GetFocusedPickupItem() const
 	APickupItemActor* ClosestItem = nullptr;
 	float BestDot = -1.f;
 
+
 	for (APickupItemActor* Item : OverlappingItems)
 	{
 		if (!IsValid(Item)) continue;
