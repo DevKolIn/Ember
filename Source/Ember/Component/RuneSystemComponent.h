@@ -5,10 +5,10 @@
 #include "GameplayAbilitySpec.h"
 #include "GameplayEffectTypes.h"
 
-// ¹İµå½Ã ¸¶Áö¸· include
+// ë°˜ë“œì‹œ ë§ˆì§€ë§‰ include
 #include "RuneSystemComponent.generated.h"
 
-//  FRuneStat¸¦ ¸ÕÀú Á¤ÀÇ
+//  FRuneStatë¥¼ ë¨¼ì € ì •ì˜
 USTRUCT(BlueprintType)
 struct FRuneStat
 {
@@ -38,7 +38,7 @@ struct FRuneStat
     }
 };
 
-// ±× ´ÙÀ½¿¡ FRuneSlot
+// ê·¸ ë‹¤ìŒì— FRuneSlot
 USTRUCT(BlueprintType)
 struct FRuneSlot
 {
@@ -47,11 +47,11 @@ struct FRuneSlot
     UPROPERTY() FGameplayAbilitySpecHandle   AbilityHandle;
     UPROPERTY() FActiveGameplayEffectHandle  EffectHandle;
 
-    UPROPERTY() FRuneStat Stat;            //  ÀÌÁ¦ UHT°¡ ÀÎ½Ä °¡´É
+    UPROPERTY() FRuneStat Stat;            //  ì´ì œ UHTê°€ ì¸ì‹ ê°€ëŠ¥
     UPROPERTY() FName     TemplateName { NAME_None };
 };
 
-// 3) ¸¶Áö¸·¿¡ UCLASS
+// 3) ë§ˆì§€ë§‰ì— UCLASS
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class EMBER_API URuneSystemComponent : public UActorComponent
 {
