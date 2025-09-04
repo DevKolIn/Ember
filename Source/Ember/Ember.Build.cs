@@ -21,7 +21,10 @@ public class Ember : ModuleRules
 			"GameplayAbilities",
 			"GamePlayTags",
 			"GamePlayTasks",
-			"Niagara"
+			"Niagara",
+			"OnlineSubsystem",
+			"OnlineSubsystemUtils",
+			"OnlineSubsystemSteam"
 		});
 
 		PrivateDependencyModuleNames.AddRange(new string[] {"GameFeatures","GameplayAbilities","GameplayTasks","GameplayTags"});
