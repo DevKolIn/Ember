@@ -1,124 +1,216 @@
-#include "QuickSlotComponent.h"
-#include "Template/RuneItemTemplate.h"     
+ï»¿#include "QuickSlotComponent.h"
+#include "Template/ItemTemplate.h"
+#include "Template/RuneItemTemplate.h"
+#include "Item/Function/ItemEffectLibrary.h"            //   ë¼ì´ë¸ŒëŸ¬ë¦¬
+#include "Character/EmberCharacter.h"     //   ì‹¤ì œ ê²½ë¡œë¡œ ìˆ˜ì •í•˜ì„¸ìš”
+#include "Net/UnrealNetwork.h"
+
+// -----------------------------------------------------
+// ìƒì„±ì
+// -----------------------------------------------------
 UQuickSlotComponent::UQuickSlotComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
+    PrimaryComponentTick.bCanEverTick = false;
 
-	QuickSlots.SetNum(MaxSlots); // ½½·Ô ÃÊ±âÈ­
+    // (ì„ íƒ) ì»´í¬ë„ŒíŠ¸ ìì²´ ë³µì œ ì—¬ë¶€ â€“ RPCì—ëŠ” í•„ìˆ˜ ì•„ë‹˜. ì†Œìœ  ì•¡í„°ê°€ Replicateë©´ ì¶©ë¶„.
+    // SetIsReplicatedByDefault(true);
+
+    QuickSlots.SetNum(MaxSlots); // ìŠ¬ë¡¯ ì´ˆê¸°í™”
 }
 
+// -----------------------------------------------------
+// BeginPlay: ì†Œìœ  ìºë¦­í„° ìºì‹œ
+// -----------------------------------------------------
+void UQuickSlotComponent::BeginPlay()
+{
+    Super::BeginPlay();
+    OwnerChar = Cast<AEmberCharacter>(GetOwner());
+}
+
+// -----------------------------------------------------
+// ì í•©í•œ ìŠ¬ë¡¯ ì°¾ê¸° (ê¸°ì¡´ ê·¸ëŒ€ë¡œ)
+// -----------------------------------------------------
 int32 UQuickSlotComponent::FindSuitableSlot(TSubclassOf<UItemTemplate> ItemClass)
 {
-	for (int32 i = 0; i < QuickSlots.Num(); ++i)
-	{
-		if (QuickSlots[i].ItemTemplateClass == ItemClass || QuickSlots[i].ItemTemplateClass == nullptr)
-		{
-			return i;
-		}
-	}
-	return INDEX_NONE;
+    for (int32 i = 0; i < QuickSlots.Num(); ++i)
+    {
+        if (QuickSlots[i].ItemTemplateClass == ItemClass || QuickSlots[i].ItemTemplateClass == nullptr)
+        {
+            return i;
+        }
+    }
+    return INDEX_NONE;
 }
 
+// -----------------------------------------------------
+// ì•„ì´í…œ ì¶”ê°€ (ê¸°ì¡´ ë¡œì§ ìœ ì§€)
+// -----------------------------------------------------
 void UQuickSlotComponent::AddItemToQuickSlot(TSubclassOf<UItemTemplate> ItemClass, int32 Quantity)
 {
-	if (!ItemClass || Quantity <= 0) return;
+    if (!ItemClass || Quantity <= 0) return;
 
-	int32 Index = FindSuitableSlot(ItemClass);
-	if (Index != INDEX_NONE)
-	{
-		FQuickSlot& Slot = QuickSlots[Index];
-		Slot.ItemTemplateClass = ItemClass;
-		Slot.Quantity += Quantity;
-		FText DisplayName = ItemClass->GetDefaultObject<UItemTemplate>()->DisplayName;
-		//  ·Î±× Ãâ·Â: ¾î¶² ¾ÆÀÌÅÛÀÌ ¸î ¹ø ½½·Ô¿¡ ¸î °³ µé¾î°¬´ÂÁö
-		UE_LOG(LogTemp, Warning, TEXT("[QuickSlot] Added item: %s x%d to Slot[%d]"),
-			*DisplayName.ToString(), Quantity, Index);
+    int32 Index = FindSuitableSlot(ItemClass);
+    if (Index != INDEX_NONE)
+    {
+        FQuickSlot& Slot = QuickSlots[Index];
+        Slot.ItemTemplateClass = ItemClass;
+        Slot.Quantity += Quantity;
 
-		//  UI °»½Å ÁöÁ¡ (¿©±â¼­ À§Á¬¿¡ ¹İ¿µÇØÁÖ´Â ·ÎÁ÷À» È£ÃâÇÏ¼¼¿ä)
-		// UpdateQuickSlotUI(Index); // ¡ç ¿¹½Ã. ½ÇÁ¦ UI ÇÔ¼ö¸í¿¡ ¸Â°Ô ¼öÁ¤
+        const UItemTemplate* CDO = ItemClass->GetDefaultObject<UItemTemplate>();
+        const FText DisplayName = CDO ? CDO->DisplayName : FText::FromString(TEXT("Unknown"));
 
-		LogQuickSlotState();
-	}
-	else
-	{
-		UE_LOG(LogTemp, Warning, TEXT("[QuickSlot] No available slot found for item: %s"),
-			*ItemClass->GetName());
-	}
+        UE_LOG(LogTemp, Warning, TEXT("[QuickSlot] Added item: %s x%d to Slot[%d]"),
+            *DisplayName.ToString(), Quantity, Index);
+
+        // TODO: UpdateQuickSlotUI(Index);
+        LogQuickSlotState();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("[QuickSlot] No available slot found for item: %s"),
+            *ItemClass->GetName());
+    }
 }
 
-
+// -----------------------------------------------------
+// ì•„ì´í…œ ì‚¬ìš©: ë¡œì»¬ í”„ë¦¬ì²´í¬ â†’ ì„œë²„ RPC
+// -----------------------------------------------------
 void UQuickSlotComponent::UseQuickSlot(int32 Index)
 {
-	if (!QuickSlots.IsValidIndex(Index)) return;
+    if (!QuickSlots.IsValidIndex(Index) || !OwnerChar) return;
 
-	FQuickSlot& Slot = QuickSlots[Index];
-	if (!Slot.ItemTemplateClass || Slot.Quantity <= 0) return;
+    const FQuickSlot& Slot = QuickSlots[Index];
+    if (!Slot.ItemTemplateClass || Slot.Quantity <= 0) return;
 
-	const UItemTemplate* Template = Slot.ItemTemplateClass->GetDefaultObject<UItemTemplate>();
-	if (!Template) return;
+    const UItemTemplate* Template = Slot.ItemTemplateClass->GetDefaultObject<UItemTemplate>();
+    if (!Template) return;
 
-	UE_LOG(LogTemp, Log, TEXT("[QuickSlot] Used item: %s from Slot[%d] (Before: %d)"),
-		*Template->DisplayName.ToString(), Index, Slot.Quantity);
+    UE_LOG(LogTemp, Log, TEXT("[QuickSlot] Try use item: %s from Slot[%d] (Before: %d)"),
+        *Template->DisplayName.ToString(), Index, Slot.Quantity);
 
-	// TODO: ¿©±â¿¡ ½ÇÁ¦ È¿°ú Àû¿ë(GAS) ³ªÁß¿¡ Ãß°¡
-	// ex) ASC->ApplyGameplayEffectToSelf(Template->ConsumableEffect ...);
+    //   ë¡œì»¬ í”„ë¦¬ì²´í¬(UI í”¼ë“œë°±)
+    FString Reason;
+    if (!UItemEffectLibrary::CanUseItem(Template, OwnerChar, Reason))
+    {
+        Client_NotifyUseDenied(Reason);
+        return;
+    }
 
-	Slot.Quantity = FMath::Max(0, Slot.Quantity - 1);
-	if (Slot.Quantity <= 0)
-	{
-		Slot.ItemTemplateClass = nullptr;
-		UE_LOG(LogTemp, Log, TEXT("[QuickSlot] Slot[%d] now empty"), Index);
-	}
-
-	// UI °»½Å ÈÅ
-	// UpdateQuickSlotUI(Index);
-
-	// »óÅÂ ·Î±×
-	LogQuickSlotState();
+    //   ì„œë²„ì—ì„œ ì‹¤ì œ ì²˜ë¦¬ (ì¹˜íŠ¸ ë°©ì§€)
+    Server_UseQuickSlot(Index);
 }
+
+// -----------------------------------------------------
+// ì„œë²„ì—ì„œ ì‹¤ì œ ì ìš©/ì†Œë¹„
+// -----------------------------------------------------
+void UQuickSlotComponent::Server_UseQuickSlot_Implementation(int32 Index)
+{
+    if (!QuickSlots.IsValidIndex(Index) || !OwnerChar) return;
+
+    FQuickSlot& Slot = QuickSlots[Index];
+    if (!Slot.ItemTemplateClass || Slot.Quantity <= 0) return;
+
+    const UItemTemplate* Template = Slot.ItemTemplateClass->GetDefaultObject<UItemTemplate>();
+    if (!Template) return;
+
+    // ì„œë²„ ì¬ê²€ì¦
+    FString Reason;
+    const bool bCan = UItemEffectLibrary::CanUseItem(Template, OwnerChar, Reason);
+    if (!bCan && Template->bConsumeOnlyIfAnyEffectApplied)
+    {
+        Client_NotifyUseDenied(Reason);
+        return;
+    }
+
+    // íš¨ê³¼ ì ìš©
+    const bool bApplied = UItemEffectLibrary::ApplyItemEffects(Template, OwnerChar, /*bServerAuthoritative*/true);
+
+    // ì†Œë¹„ ê·œì¹™
+    if (bApplied || !Template->bConsumeOnlyIfAnyEffectApplied)
+    {
+        ConsumeOne(Index);
+        LogQuickSlotState();
+        // TODO: Multicast_PlayUseFX(Index);
+    }
+    else
+    {
+        Client_NotifyUseDenied(TEXT("ì ìš©ë  íš¨ê³¼ê°€ ì—†ìŠµë‹ˆë‹¤."));
+    }
+}
+
+// -----------------------------------------------------
+// í´ë¼ í”¼ë“œë°±
+// -----------------------------------------------------
+void UQuickSlotComponent::Client_NotifyUseDenied_Implementation(const FString& Reason)
+{
+    UE_LOG(LogTemp, Warning, TEXT("ì•„ì´í…œ ì‚¬ìš© ë¶ˆê°€: %s"), *Reason);
+    // TODO: UI í† ìŠ¤íŠ¸/ì‚¬ìš´ë“œ/ì§„ë™
+}
+
+// -----------------------------------------------------
+// 1ê°œ ì†Œë¹„ ë° ë¹„ìš°ê¸°
+// -----------------------------------------------------
+void UQuickSlotComponent::ConsumeOne(int32 Index)
+{
+    if (!QuickSlots.IsValidIndex(Index)) return;
+    FQuickSlot& Slot = QuickSlots[Index];
+
+    Slot.Quantity = FMath::Max(0, Slot.Quantity - 1);
+    if (Slot.Quantity <= 0)
+    {
+        Slot.ItemTemplateClass = nullptr;
+        UE_LOG(LogTemp, Log, TEXT("[QuickSlot] Slot[%d] now empty"), Index);
+    }
+
+    // TODO: UpdateQuickSlotUI(Index);
+}
+
+// -----------------------------------------------------
+// ë£¬ ì¶”ê°€ (ê¸°ì¡´ ìœ ì§€)
+// -----------------------------------------------------
 void UQuickSlotComponent::AddRuneToQuickSlot(TSubclassOf<URuneItemTemplate> RuneTemplateClass, int32 Quantity)
 {
-	if (!*RuneTemplateClass || Quantity <= 0) return;
+    if (!*RuneTemplateClass || Quantity <= 0) return;
 
-	int32& Count = RuneStacks.FindOrAdd(RuneTemplateClass);
-	Count += Quantity;
+    int32& Count = RuneStacks.FindOrAdd(RuneTemplateClass);
+    Count += Quantity;
 
-	UE_LOG(LogTemp, Log, TEXT("[QuickSlot] Added RUNE %s x%d (total=%d)"),
-		*RuneTemplateClass->GetName(), Quantity, Count);
-	// »óÅÂ ·Î±×
-	LogQuickSlotState();
-	// TODO: ¿©±â¼­ UI °»½Å ºê·ÎµåÄ³½ºÆ®°¡ ÀÖ´Ù¸é È£Ãâ
+    UE_LOG(LogTemp, Log, TEXT("[QuickSlot] Added RUNE %s x%d (total=%d)"),
+        *RuneTemplateClass->GetName(), Quantity, Count);
+
+    LogQuickSlotState();
+    // TODO: UI ê°±ì‹  ë¸Œë¡œë“œìºìŠ¤íŠ¸
 }
 
-
+// -----------------------------------------------------
+// ìŠ¬ë¡¯ ì¡°íšŒ (ê¸°ì¡´ ìœ ì§€)
+// -----------------------------------------------------
 const FQuickSlot* UQuickSlotComponent::GetSlot(int32 Index) const
 {
-	return QuickSlots.IsValidIndex(Index) ? &QuickSlots[Index] : nullptr;
+    return QuickSlots.IsValidIndex(Index) ? &QuickSlots[Index] : nullptr;
 }
 
-
+// -----------------------------------------------------
+// ìƒíƒœ ë¡œê·¸ (ê¸°ì¡´ ìœ ì§€)
+// -----------------------------------------------------
 void UQuickSlotComponent::LogQuickSlotState() const
 {
-	UE_LOG(LogTemp, Warning, TEXT("===== Current QuickSlot State ====="));
-	for (int32 i = 0; i < QuickSlots.Num(); ++i)
-	{
-		const FQuickSlot& Slot = QuickSlots[i];
+    UE_LOG(LogTemp, Warning, TEXT("===== Current QuickSlot State ====="));
+    for (int32 i = 0; i < QuickSlots.Num(); ++i)
+    {
+        const FQuickSlot& Slot = QuickSlots[i];
 
-		if (Slot.ItemTemplateClass)
-		{
-			const UItemTemplate* DefaultItem = Slot.ItemTemplateClass->GetDefaultObject<UItemTemplate>();
-			FString ItemName = DefaultItem ? DefaultItem->DisplayName.ToString() : TEXT("Unknown");
+        if (Slot.ItemTemplateClass)
+        {
+            const UItemTemplate* DefaultItem = Slot.ItemTemplateClass->GetDefaultObject<UItemTemplate>();
+            const FString ItemName = DefaultItem ? DefaultItem->DisplayName.ToString() : TEXT("Unknown");
 
-			UE_LOG(LogTemp, Warning, TEXT("Slot[%d]: %s x%d"),
-				i,
-				*ItemName,
-				Slot.Quantity);
-		}
-		else
-		{
-			UE_LOG(LogTemp, Warning, TEXT("Slot[%d]: (empty)"), i);
-		}
-	}
-	UE_LOG(LogTemp, Warning, TEXT("===================================="));
+            UE_LOG(LogTemp, Warning, TEXT("Slot[%d]: %s x%d"), i, *ItemName, Slot.Quantity);
+        }
+        else
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Slot[%d]: (empty)"), i);
+        }
+    }
+    UE_LOG(LogTemp, Warning, TEXT("===================================="));
 }
-
