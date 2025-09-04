@@ -68,13 +68,13 @@ void AEmberCharacter::BeginPlay()
 	TemperatureLeve = 1.0f;
 	Super::BeginPlay();
 	MoveComponent->OnWalk();
+
 }
 
 void AEmberCharacter::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
 
-	// (디버그 콘솔/로그 등)
 	if (AEmberPlayerState* PS = GetPlayerState<AEmberPlayerState>())
 	{
 		ASC = PS->GetAbilitySystemComponent();
@@ -105,8 +105,16 @@ void AEmberCharacter::PossessedBy(AController* NewController)
 		{
 			Attr->OnOutOfHealth.AddUObject(this, &AEmberCharacter::Dead);
 		}
+
+		const float MaxTemp = ASC->GetNumericAttribute(UEmberAS_Player::GetMaxPlayerTemperatureAttribute());
+
+		ASC->SetNumericAttributeBase(UEmberAS_Player::GetPlayerTemperatureAttribute(), MaxTemp * 0.5f);
+
+		UE_LOG(LogTemp, Warning, TEXT("[Test] PossessedBy 초기화 후 Temp=%.1f/%.1f"),
+			ASC->GetNumericAttribute(UEmberAS_Player::GetPlayerTemperatureAttribute()), MaxTemp);
 	}
 }
+
 void AEmberCharacter::OnRep_PlayerState()
 {
 	Super::OnRep_PlayerState();

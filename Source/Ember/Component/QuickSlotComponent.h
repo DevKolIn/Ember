@@ -1,55 +1,68 @@
-#pragma once
+Ôªø#pragma once
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "Template/ItemTemplate.h"
 #include "QuickSlotComponent.generated.h"
-class URuneItemTemplate;       // ¿¸πÊ º±æ («Ï¥ı º¯»Ø πÊ¡ˆ)
+
+class URuneItemTemplate;
+class AEmberCharacter;          // Ï†ÑÎ∞©ÏÑ†Ïñ∏ Ï∂îÍ∞Ä
+class UAbilitySystemComponent;  // (ASCÎ°ú Ïì∞Ïã§ Í≤ΩÏö∞)
+
 USTRUCT(BlueprintType)
 struct FQuickSlot
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<UItemTemplate> ItemTemplateClass;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    TSubclassOf<UItemTemplate> ItemTemplateClass;  // Í∑∏ÎåÄÎ°ú Ïú†ÏßÄ (BP ÌÅ¥ÎûòÏä§ CDO ÏÇ¨Ïö©)
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	int32 Quantity = 0;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+    int32 Quantity = 0;
 };
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class EMBER_API UQuickSlotComponent : public UActorComponent
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	UQuickSlotComponent();
+    UQuickSlotComponent();
 
-	// (±‚¡∏) æ∆¿Ã≈€ √ﬂ∞°
-	UFUNCTION(BlueprintCallable, Category = "QuickSlot")
-	void AddItemToQuickSlot(TSubclassOf<UItemTemplate> ItemTemplateClass, int32 Quantity);
+    UFUNCTION(BlueprintCallable, Category = "QuickSlot")
+    void AddItemToQuickSlot(TSubclassOf<UItemTemplate> ItemTemplateClass, int32 Quantity);
 
-	// ªı∑Œ √ﬂ∞°: ∑È ≈€«√∏¥ √ﬂ∞°
-	UFUNCTION(BlueprintCallable, Category = "QuickSlot")
-	void AddRuneToQuickSlot(TSubclassOf<URuneItemTemplate> RuneTemplateClass, int32 Quantity);
-	void UseQuickSlot(int32 Index);
-	const FQuickSlot* GetSlot(int32 Index) const;
+    UFUNCTION(BlueprintCallable, Category = "QuickSlot")
+    void AddRuneToQuickSlot(TSubclassOf<URuneItemTemplate> RuneTemplateClass, int32 Quantity);
 
-	
+    UFUNCTION(BlueprintCallable, Category = "QuickSlot")
+    void UseQuickSlot(int32 Index);
+
+    const FQuickSlot* GetSlot(int32 Index) const;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "QuickSlot")
-	TArray<FQuickSlot> QuickSlots;
+    virtual void BeginPlay() override;
 
-	UPROPERTY(EditDefaultsOnly, Category = "QuickSlot")
-	int32 MaxSlots = 5;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "QuickSlot")
+    TArray<FQuickSlot> QuickSlots;
 
-	int32 FindSuitableSlot(TSubclassOf<UItemTemplate> ItemClass);
+    UPROPERTY(EditDefaultsOnly, Category = "QuickSlot")
+    int32 MaxSlots = 5;
 
-	void LogQuickSlotState() const;
+    int32 FindSuitableSlot(TSubclassOf<UItemTemplate> ItemClass);
+    void LogQuickSlotState() const;
+
+    // ÏÑúÎ≤ÑÏóêÏÑú Ïã§Ï†ú Ï≤òÎ¶¨
+    UFUNCTION(Server, Reliable)
+    void Server_UseQuickSlot(int32 Index);
+
+    // Í±∞Î∂Ä ÌîºÎìúÎ∞±(ÏÑ†ÌÉù)
+    UFUNCTION(Client, Unreliable)
+    void Client_NotifyUseDenied(const FString& Reason);
+
+    void ConsumeOne(int32 Index);
 
 private:
-	//  ∞£¥‹«— ¿˙¿Âº“ (ø¯«œ∏È «¡∑Œ¡ß∆Æ ±∏¡∂ø° ∏¬√Á πŸ≤Ÿººø‰)
-	UPROPERTY()
-	TMap<TSubclassOf<URuneItemTemplate>, int32> RuneStacks;
+    UPROPERTY() AEmberCharacter* OwnerChar = nullptr;
+    UPROPERTY() TMap<TSubclassOf<URuneItemTemplate>, int32> RuneStacks;
 };

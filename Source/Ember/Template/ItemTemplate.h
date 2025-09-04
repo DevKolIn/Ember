@@ -1,3 +1,4 @@
+// ItemTemplate.h
 #pragma once
 
 #include "CoreMinimal.h"
@@ -5,60 +6,65 @@
 #include "NiagaraSystem.h"
 #include "ItemTemplate.generated.h"
 
-class UNiagaraSystem;
 UENUM(BlueprintType)
-enum class EItemEffectType : uint8
+enum class EItemEffectKind : uint8
 {
-	RestoreHP             UMETA(DisplayName = "체력 회복"),
-	RestoreStamina        UMETA(DisplayName = "스태미너 회복"),
-	RestoreBodyTemp       UMETA(DisplayName = "체온 회복"),
-	Buff_StatHold         UMETA(DisplayName = "스탯 유지 버프"),
-	Buff_MaxStat          UMETA(DisplayName = "최대 스탯 증가"),
-	RandomDebuff          UMETA(DisplayName = "확률 디버프"),
-	CastSpell             UMETA(DisplayName = "마법 스크롤 발동"),
-	None                  UMETA(DisplayName = "없음")
+    RestoreHP,
+    RestoreBodyTemp,
+    Buff_StatHold,
+    Buff_MaxStat,
+    RandomDebuff,
+    CastSpell
 };
+UENUM(BlueprintType)
+enum class EItemStatTarget : uint8
+{
+    HP, Stamina, BodyTemp
+};
+
+USTRUCT(BlueprintType)
+struct FItemEffectSpec
+{
+    GENERATED_BODY()
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
+    EItemEffectKind Type = EItemEffectKind::RestoreHP;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
+    float Chance = 1.0f;                   // 0~1
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "Type==EItemEffectKind::RestoreHP || Type==EItemEffectKind::RestoreBodyTemp || Type==EItemEffectKind::Buff_MaxStat"))
+    float Magnitude = 0.f;                 // 회복/증가량
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "Type==EItemEffectKind::Buff_StatHold || Type==EItemEffectKind::Buff_MaxStat"))
+    float Duration = 0.f;                  // 지속시간(초)
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "Type==EItemEffectKind::Buff_StatHold || Type==EItemEffectKind::Buff_MaxStat"))
+    EItemStatTarget TargetStat = EItemStatTarget::BodyTemp;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, meta = (EditCondition = "Type==EItemEffectKind::RandomDebuff"))
+    float DebuffMagnitude = 0.f;
+};
+
 UCLASS(BlueprintType, Blueprintable)
 class UItemTemplate : public UDataAsset
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	// 기본 정보
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
-	FName ItemID;
+    // 기본 정보
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item") FName ItemID;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item") FText DisplayName;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item") FText Description;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item") UTexture2D* Icon = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item") UStaticMesh* ItemMesh = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item") UNiagaraSystem* DropEffect = nullptr;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item") int32 MaxStackSize = 1;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
-	FText DisplayName;
+    //  한 아이템에 복수 효과를 담는 핵심 필드
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effects")
+    TArray<FItemEffectSpec> Effects;
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
-	FText Description;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
-	UTexture2D* Icon;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
-	UStaticMesh* ItemMesh;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
-	UNiagaraSystem* DropEffect;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
-	int32 MaxStackSize = 1;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect")
-	EItemEffectType EffectType;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect", meta = (EditCondition = "EffectType == EItemEffectType::RestoreHP"))
-	float HealAmount;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect", meta = (EditCondition = "EffectType == EItemEffectType::RestoreBodyTemp"))
-	float TemperatureRestoreAmount;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect", meta = (EditCondition = "EffectType == EItemEffectType::Buff_StatHold"))
-	float BuffDuration;
-
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Effect", meta = (EditCondition = "EffectType == EItemEffectType::RandomDebuff"))
-	float DebuffChance;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Rules")
+    bool bConsumeOnlyIfAnyEffectApplied = true; // 하나도 적용 안되면 소비/사용 금지
 };
-
